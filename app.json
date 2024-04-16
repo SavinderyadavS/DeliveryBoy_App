@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "DeliveryBoy_App",
+    "slug": "snack-dca18de4-2ea1-4eaa-85b2-c60b0fee8df0",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/dboy.jpg",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "package": "com.savinder_paaniwala.snackdca18de42ea14eaa85b2c60b0fee8df0"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "4f3d7f72-5b89-4cbc-a6e8-fbb931edf80e"
+      }
+    }
+  }
+}
