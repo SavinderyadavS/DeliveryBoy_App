@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import { View, Text, TouchableOpacity, Image  , ActivityIndicator} from 'react-native';
 import { Camera } from 'expo-camera';
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -16,7 +16,7 @@ const TakeSelfie = () => {
   const [error, setError] = useState(null);
   const [showCamera, setShowCamera] = useState(false); // New state variable
   const [isContinueDisabled, setIsContinueDisabled] = useState(true); // New state variable
-
+  const [isLoading, setIsLoading] = useState(false); // New state variable
   
   const user = useSelector(state => state.user);
 
@@ -76,20 +76,22 @@ async function uploadImg(filename , file) {
   }
   catch (error) {
     throw error;
-  }
+  } 
 }
-
 
 
   const handleContinue = async () => {
 
+    setIsLoading(true);
     const delaerSelfiImage = await uploadImage(`delaerSelfi`, capturedImage); 
 
 await firestore().collection('users').doc(user.uid).update({
-  delaerSelfiImage 
+  delaerSelfiImage ,
+  verified:"verification"
       }); 
 
     if (!isContinueDisabled) {
+      setIsLoading(true);
       // Navigate to next page only if an image has been captured
       navigation.navigate('Hurray'); // Replace 'NextPage' with your actual screen name
     }
@@ -136,7 +138,7 @@ await firestore().collection('users').doc(user.uid).update({
       )}
       {error && <Text>Error: {error}</Text>}
       <TouchableOpacity onPress={handleContinue} style={[styles.continueButton, isContinueDisabled && styles.disabledButton]}>
-        <Text style={styles.continueButtonText}>Continue</Text>
+        {isLoading ? <ActivityIndicator size="small" color="#fff" /> : <Text style={styles.continueButtonText}>Continue</Text> } 
       </TouchableOpacity>
     </View>
   );

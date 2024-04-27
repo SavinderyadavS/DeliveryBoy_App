@@ -1,23 +1,24 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, ActivityIndicator } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import auth from '@react-native-firebase/auth';
 
 const LoginScreen = () => {
   const navigation = useNavigation();
   const [mobileNumber, setMobileNumber] = useState('');
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    setLoading(true); // Set loading state to true when login button is clicked
     try {
-      // Here you can add further validation for the mobile number if needed
-      // For simplicity, let's assume the number is valid
-      // Then navigate to the OTP page and pass mobileNumber as a parameter
       const formattedPhoneNumber = `+91${mobileNumber}`;
       const confirmation = await signInWithPhoneNumber(formattedPhoneNumber);
       navigation.navigate('OTPPage', { formattedPhoneNumber, confirmation });
     } catch (error) {
       console.error('Error occurred during login:', error);
       // Handle error if needed
+    } finally {
+      setLoading(false); // Set loading state back to false after login attempt is finished
     }
   };
 
@@ -48,8 +49,12 @@ const LoginScreen = () => {
             }}
           />
         </View>
-        <TouchableOpacity style={styles.button} onPress={handleLogin}>
-          <Text style={styles.buttonText}>Get OTP</Text>
+        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Get OTP</Text>
+          )}
         </TouchableOpacity>
       </View>
     </ImageBackground>
@@ -91,6 +96,7 @@ const styles = StyleSheet.create({
   },
   button: {
     width: '100%',
+    padding: 4,
     height: 50,
     backgroundColor: '#3aa8c1',
     justifyContent: 'center',

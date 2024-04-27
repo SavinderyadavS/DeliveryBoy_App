@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import firestore from '@react-native-firebase/firestore';
 
@@ -12,16 +12,14 @@ const BasicDetailsPage = ({ navigation,route }) => {
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
+  const [loading, setLoading] = useState(false); // State to track loading
 
-
-    const { formattedPhoneNumber} = route.params; 
-
+  const { formattedPhoneNumber} = route.params; 
 
   const dispatch = useDispatch();
   const user = useSelector(state => state.user);
 
   const {uid} = user;
-
 
   useEffect(() => {
     // Enable or disable button based on field values
@@ -35,8 +33,7 @@ const BasicDetailsPage = ({ navigation,route }) => {
   const handleContinue = async () => {
     // Check if all fields are filled
     if (firstName && lastName && gender) {
-      // Navigate to the next screen
-console.log("creating")
+      setLoading(true); // Set loading state to true when Continue button is clicked
       try {
         await firestore().collection('users').doc(uid).set({
           firstName,
@@ -44,16 +41,15 @@ console.log("creating")
           gender,
           mobileNumber:formattedPhoneNumber,
           type : "dealer",
-          verified:true // this should be done by  manual for verification 
+          verified:"doc" // this should be done by  manual for verification 
         });
 
         navigation.navigate('UploadDocuments');
-        // navigation.navigate('Main'); // Move to main screen
-    } catch (error) {
+      } catch (error) {
         console.log("Failed to save:", error);
-    }
-
-      
+      } finally {
+        setLoading(false); // Set loading state back to false after saving or if there's an error
+      }      
     } else {
       // Display an alert if any field is empty
       alert('Please fill in all fields.');
@@ -92,8 +88,12 @@ console.log("creating")
           </TouchableOpacity>
         </View>
 
-        <TouchableOpacity onPress={handleContinue} disabled={isButtonDisabled} style={[styles.button, { backgroundColor: isButtonDisabled ? 'gray' : '#3aa8c1' }]}>
-          <Text style={styles.buttonText}>Continue</Text>
+        <TouchableOpacity onPress={handleContinue} disabled={isButtonDisabled || loading} style={[styles.button, { backgroundColor: (isButtonDisabled || loading) ? 'gray' : '#3aa8c1' }]}>
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text style={styles.buttonText}>Continue</Text>
+          )}
         </TouchableOpacity>
       </View>
     </LinearGradient>

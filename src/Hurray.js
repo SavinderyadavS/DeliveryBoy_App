@@ -1,29 +1,46 @@
-import React, { useEffect } from 'react';
-import { View, Text, StyleSheet, Dimensions } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Dimensions, BackHandler } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
-import { useDispatch, useSelector } from 'react-redux';
-
+import { useSelector } from 'react-redux';
+import firestore from "@react-native-firebase/firestore";
 
 const Hurray = () => {
   const navigation = useNavigation();
   const user = useSelector(state => state.user);
-
-
-  const {uid , userData}=  user;
-
-
+  const [verified, setVerified] = useState(false);
 
   useEffect(() => {
-    // const timer = setTimeout(() => {
-    //   navigation.navigate('Main');
-    // }, 5000);
-  
-    // return () => clearTimeout(timer); // Clear the timeout on component unmount
-    if (userData.verified) {
-      navigation.navigate('Main'); 
-    } 
-  }, [userData.verified]);
-  
+    const backAction = () => {
+      return true; // Return true to prevent default behavior (i.e., going back)
+    };
+
+    const backHandler = BackHandler.addEventListener(
+      'hardwareBackPress',
+      backAction
+    );
+
+    return () => backHandler.remove();
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = firestore()
+      .collection('users')
+      .doc(user.uid)
+      .onSnapshot((doc) => {
+        if (doc.exists) {
+          const userData = doc.data();
+          setVerified(userData.verified === 'verified');
+        }
+      });
+
+    return () => unsubscribe();
+  }, [user.uid]);
+
+  useEffect(() => {
+    if (verified) {
+      navigation.navigate('Main');
+    }
+  }, [verified, navigation]);
 
   return (
     <View style={styles.container}>

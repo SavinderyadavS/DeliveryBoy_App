@@ -1,5 +1,6 @@
+// Import ActivityIndicator from react-native
 import React, { useState } from 'react';
-import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, Image, ScrollView } from 'react-native';
+import { View, Text, TextInput, StyleSheet, TouchableOpacity, Alert, Image, ScrollView, ActivityIndicator } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -16,12 +17,11 @@ const BankDetails = () => {
   const [ifscCode, setIfscCode] = useState('');
   const [passbookImage, setPassbookImage] = useState(null);
   const [selectedBank, setSelectedBank] = useState('');
+  const [isLoading, setIsLoading] = useState(false); // State variable to track loading
 
   const user = useSelector(state => state.user);
 
-
-  const uploadImage = async (filename,fileUri ) => {
-
+  const uploadImage = async (filename, fileUri ) => {
     try {
       const response = await fetch(fileUri);
       const blob = await response.blob();
@@ -32,29 +32,27 @@ const BankDetails = () => {
     }
   }
 
+  async function uploadImg(filename , file) {
+    const path = `users/${user.uid}/${filename}`;
 
-async function uploadImg(filename , file) {
-  const path = `users/${filename}`;
+    try {
+      const reference = storage().ref(path);
+      await reference.put(file);
 
-  try {
-    const reference = storage().ref(path);
-        await reference.put(file);
-
-        const url = await reference.getDownloadURL().catch((error) => { throw error; });
-        return url;
+      const url = await reference.getDownloadURL().catch((error) => { throw error; });
+      return url;
+    } catch (error) {
+      throw error;
+    }
   }
-  catch (error) {
-    throw error;
-  }
-}
-
-
 
   const handleSave = async () => {
     if (accountNumber && reEnteredAccountNumber && selectedBank && ifscCode) {
       if (accountNumber === reEnteredAccountNumber) {
-        const passBookImage = await uploadImage(`passbook`, passbookImage);
+        // Set loading state to true when starting upload
+        setIsLoading(true);
 
+        const passBookImage = await uploadImage(`passbook`, passbookImage);
 
         const bankDetails = {
           accountNumber,
@@ -64,13 +62,15 @@ async function uploadImg(filename , file) {
         }
 
         await firestore().collection('users').doc(user.uid).update({
-          bankDetails 
-      }); 
-
-  
+          bankDetails ,
+          verified:"selfi"
+        }); 
 
         console.log('Bank details saved successfully');
         navigation.navigate('TakeSelfie');
+
+        // Set loading state to false after upload is complete
+        setIsLoading(false);
       } else {
         Alert.alert('Error', 'Account numbers do not match');
       }
@@ -78,7 +78,6 @@ async function uploadImg(filename , file) {
       Alert.alert('Error', 'Please fill in all the details');
     }
   };
-
 
   const handlePassbookUpload = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
@@ -94,8 +93,6 @@ async function uploadImg(filename , file) {
     }
   };
 
-
-  
   return (
     <LinearGradient
       colors={['white', 'white']}
@@ -162,7 +159,11 @@ async function uploadImg(filename , file) {
           <Text style={styles.note}>*Please check the details entered before Continuing</Text>
 
           <TouchableOpacity onPress={handleSave} style={styles.saveButton}>
-            <Text style={styles.saveButtonText}>Continue</Text>
+            {isLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.saveButtonText}>Continue</Text>
+            )}
           </TouchableOpacity>
         </View>
       </ScrollView>

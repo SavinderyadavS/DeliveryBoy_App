@@ -21,7 +21,7 @@ const MyAccountScreen = () => {
 
   // Placeholder data
   const deliveryBoy = {
-    name: userData.name || 'test user',
+    name: userData.firstName || 'test user',
     image: userData.delaerSelfiImage ? { uri: userData.delaerSelfiImage } : require('../assets/dboy.jpg'),
     contact: userData.mobileNumber || '+91 9353762773',
   };

@@ -1,27 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground  } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground, Alert, ActivityIndicator } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-
-import firestore from '@react-native-firebase/firestore'; 
-
+import firestore from '@react-native-firebase/firestore';
 
 import { useDispatch, useSelector } from 'react-redux';
 import { setUserID, setUserData } from './Store/Slice/userSlice';
-
 
 const OTPPage = ({ navigation, route }) => {
     const [seconds, setSeconds] = useState(20);
     const [timerActive, setTimerActive] = useState(true);
     const [otp, setOTP] = useState('');
-    // const { mobileNumber } = route.params; // Destructure mobileNumber from route params
+    const [loading, setLoading] = useState(false);
 
-    const { formattedPhoneNumber , confirmation } = route.params; // Destructure mobileNumber from route params
+    const { formattedPhoneNumber, confirmation  } = route.params;
 
     const dispatch = useDispatch();
     const user = useSelector(state => state.user);
 
-    // console.log("page")
-    // Effect to decrement the timer every second
     useEffect(() => {
         const timerInterval = setInterval(() => {
             if (seconds > 0 && timerActive) {
@@ -31,74 +26,92 @@ const OTPPage = ({ navigation, route }) => {
             }
         }, 1000);
 
-        // Cleanup function to clear the interval
         return () => clearInterval(timerInterval);
     }, [seconds, timerActive]);
 
-
     useEffect(() => {
         const unsubscribe = firestore()
-          .collection('users')
-          .doc(user.uid)
-          .onSnapshot(documentSnapshot => {
-            dispatch(setUserData(documentSnapshot.data()));
-          });
-    
-        // Clean up subscription when component unmounts or user changes
+            .collection('users')
+            .doc(user.uid)
+            .onSnapshot(documentSnapshot => {
+                dispatch(setUserData(documentSnapshot.data()));
+            });
+
         return () => unsubscribe();
-      }, [user.uid]); 
+    }, [user.uid]);
 
-    
-
-
-    const handleResendOTP = () => {
-        // Reset timer and enable it
-        setSeconds(20);
-        setTimerActive(true);
-    };
-
-    const handleVerifyOTP = async () => {
+    const handleResendOTP = async () => {
         try {
-            const userCredential = await confirmation.confirm(otp);
-            const user = userCredential.user;
-    
-            const authToken = await user.getIdToken(); // Assuming Firebase user object has getIdToken method
-
-            await AsyncStorage.setItem('authToken', authToken);
-            await AsyncStorage.setItem('userID', user.uid);
-            
-    
-            const userDocument = await firestore()
-                .collection('users')
-                .doc(user.uid)
-                .get();
-    
-            dispatch(setUserID(user.uid));
-    
-            if (userDocument.exists) {
-                const userType = userDocument.data().type;
-    
-                if (userType === 'dealer') {
-                    // console.log("User type:", userType);
-                    dispatch(setUserData(userDocument.data()));
-                    navigation.navigate('Main');
-                   
-                } else {
-                    // If user type is not dealer, show alert
-                    console.log("User is not a dealer, redirecting to customer app");
-                    alert('Please use the customer app for orders.');
-                    navigation.navigate('LoginScreen');
-                }
-            } else {
-                // If user document does not exist, navigate to CreateProfile
-                console.log("User does not exist");
-                navigation.navigate('CreateProfile', { uid: user.uid ,formattedPhoneNumber});
-            }
+            const newConfirmation = await firebase.auth().signInWithPhoneNumber(formattedPhoneNumber);
+            Alert.alert('OTP Resent', 'A new OTP has been sent to your mobile number.');
+            setSeconds(20);
+            setTimerActive(true);
         } catch (error) {
-            console.error("Error occurred during user verification:", error);
+            console.error('Error resending OTP:', error);
         }
     };
 
+    const handleVerifyOTP = async () => {
+        setLoading(true); // Set loading state to true when Verify OTP button is clicked
+        try {
+            const userCredential = await confirmation.confirm(otp);
+            const user = userCredential.user;
+        
+            const authToken = await user.getIdToken();
+            await AsyncStorage.setItem('authToken', authToken);
+            await AsyncStorage.setItem('userID', user.uid);
+
+            const userDocumentSnapshot = await firestore().collection('users').doc(user.uid).get();
+            dispatch(setUserID(user.uid));
+
+            if (userDocumentSnapshot.exists) {
+                const userDocument = userDocumentSnapshot.data();
+
+                if (userDocument.type !== 'dealer') {
+                    Alert.alert(
+                        'Not a Dealer',
+                        'You are not a dealer. Please login using the user application.',
+                        [
+                            {
+                                text: 'OK',
+                                onPress: () => navigation.navigate('LoginScreen'),
+                            },
+                        ]
+                    );
+                } else {
+                    dispatch(setUserData(userDocument));
+
+                    const verificationStatus = userDocument.verified;
+                    switch (verificationStatus) {
+                        case 'doc':
+                            navigation.navigate('UploadDocuments');
+                            break;
+                        case 'bank':
+                            navigation.navigate('BankDetails');
+                            break;
+                        case 'selfi':
+                            navigation.navigate('TakeSelfie');
+                            break;
+                        case 'verification':
+                            navigation.navigate('Hurray');
+                            break;
+                        case 'verified':
+                            navigation.navigate('Main');
+                            break;
+                        default:
+                            navigation.navigate('LoginScreen');
+                    }
+                }
+            } else {
+                console.log('User document does not exist');
+                navigation.navigate('CreateProfile', { uid: user.uid ,formattedPhoneNumber});
+            }
+        } catch (error) {
+            console.error('Error verifying OTP:', error);
+        } finally {
+            setLoading(false); // Set loading state back to false after OTP verification is finished
+        }
+    };
 
     return (
         <ImageBackground source={require('../assets/giphy.gif')} style={styles.background}>
@@ -124,8 +137,12 @@ const OTPPage = ({ navigation, route }) => {
                 >
                     <Text style={styles.resendButtonText}>Resend OTP</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP}>
-                    <Text style={styles.verifyButtonText}>Verify OTP</Text>
+                <TouchableOpacity style={styles.verifyButton} onPress={handleVerifyOTP} disabled={loading}>
+                    {loading ? (
+                        <ActivityIndicator color="#fff" />
+                    ) : (
+                        <Text style={styles.verifyButtonText}>Verify OTP</Text>
+                    )}
                 </TouchableOpacity>
             </View>
         </ImageBackground>
