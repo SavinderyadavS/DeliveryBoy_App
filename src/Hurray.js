@@ -1,17 +1,29 @@
 import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Dimensions } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
+import { useDispatch, useSelector } from 'react-redux';
+
 
 const Hurray = () => {
   const navigation = useNavigation();
+  const user = useSelector(state => state.user);
+
+
+  const {uid , userData}=  user;
+
+
 
   useEffect(() => {
-    const timer = setTimeout(() => {
-      navigation.navigate('Main');
-    }, 5000);
-
-    return () => clearTimeout(timer); // Clear the timeout on component unmount
-  }, [navigation]);
+    // const timer = setTimeout(() => {
+    //   navigation.navigate('Main');
+    // }, 5000);
+  
+    // return () => clearTimeout(timer); // Clear the timeout on component unmount
+    if (userData.verified) {
+      navigation.navigate('Main'); 
+    } 
+  }, [userData.verified]);
+  
 
   return (
     <View style={styles.container}>

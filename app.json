@@ -2,6 +2,7 @@
   "expo": {
     "name": "DeliveryBoy_App",
     "slug": "snack-dca18de4-2ea1-4eaa-85b2-c60b0fee8df0",
+    "plugins": ["@react-native-firebase/app", "@react-native-firebase/auth"],
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/dboy.jpg",
@@ -18,6 +19,7 @@
       "supportsTablet": true
     },
     "android": {
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

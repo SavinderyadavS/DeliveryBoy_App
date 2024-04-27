@@ -1,12 +1,26 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, ImageBackground  } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+import firestore from '@react-native-firebase/firestore'; 
+
+
+import { useDispatch, useSelector } from 'react-redux';
+import { setUserID, setUserData } from './Store/Slice/userSlice';
+
 
 const OTPPage = ({ navigation, route }) => {
     const [seconds, setSeconds] = useState(20);
     const [timerActive, setTimerActive] = useState(true);
     const [otp, setOTP] = useState('');
-    const { mobileNumber } = route.params; // Destructure mobileNumber from route params
+    // const { mobileNumber } = route.params; // Destructure mobileNumber from route params
 
+    const { formattedPhoneNumber , confirmation } = route.params; // Destructure mobileNumber from route params
+
+    const dispatch = useDispatch();
+    const user = useSelector(state => state.user);
+
+    // console.log("page")
     // Effect to decrement the timer every second
     useEffect(() => {
         const timerInterval = setInterval(() => {
@@ -21,26 +35,77 @@ const OTPPage = ({ navigation, route }) => {
         return () => clearInterval(timerInterval);
     }, [seconds, timerActive]);
 
+
+    useEffect(() => {
+        const unsubscribe = firestore()
+          .collection('users')
+          .doc(user.uid)
+          .onSnapshot(documentSnapshot => {
+            dispatch(setUserData(documentSnapshot.data()));
+          });
+    
+        // Clean up subscription when component unmounts or user changes
+        return () => unsubscribe();
+      }, [user.uid]); 
+
+    
+
+
     const handleResendOTP = () => {
         // Reset timer and enable it
         setSeconds(20);
         setTimerActive(true);
     };
 
-    const handleVerifyOTP = () => {
-        // Here you can verify the OTP
-        // For simplicity, let's assume the OTP is correct
-        // You can add your logic for OTP verification here
-        // After successful verification, navigate to the next screen
-        navigation.navigate('CreateProfile'); // Example navigation to Home screen
+    const handleVerifyOTP = async () => {
+        try {
+            const userCredential = await confirmation.confirm(otp);
+            const user = userCredential.user;
+    
+            const authToken = await user.getIdToken(); // Assuming Firebase user object has getIdToken method
+
+            await AsyncStorage.setItem('authToken', authToken);
+            await AsyncStorage.setItem('userID', user.uid);
+            
+    
+            const userDocument = await firestore()
+                .collection('users')
+                .doc(user.uid)
+                .get();
+    
+            dispatch(setUserID(user.uid));
+    
+            if (userDocument.exists) {
+                const userType = userDocument.data().type;
+    
+                if (userType === 'dealer') {
+                    // console.log("User type:", userType);
+                    dispatch(setUserData(userDocument.data()));
+                    navigation.navigate('Main');
+                   
+                } else {
+                    // If user type is not dealer, show alert
+                    console.log("User is not a dealer, redirecting to customer app");
+                    alert('Please use the customer app for orders.');
+                    navigation.navigate('LoginScreen');
+                }
+            } else {
+                // If user document does not exist, navigate to CreateProfile
+                console.log("User does not exist");
+                navigation.navigate('CreateProfile', { uid: user.uid ,formattedPhoneNumber});
+            }
+        } catch (error) {
+            console.error("Error occurred during user verification:", error);
+        }
     };
+
 
     return (
         <ImageBackground source={require('../assets/giphy.gif')} style={styles.background}>
             <View style={styles.container}>
                 <View>
                     <Text style={styles.label}>Enter the OTP sent to</Text>
-                    <Text style={styles.mobileNumber}>{mobileNumber}</Text>
+                    <Text style={styles.mobileNumber}>{formattedPhoneNumber}</Text>
                 </View>
                 {timerActive && seconds > 0 && (
                     <Text style={styles.timer}>Resend OTP in {seconds} seconds</Text>

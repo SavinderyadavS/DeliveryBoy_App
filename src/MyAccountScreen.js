@@ -1,13 +1,29 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Image } from 'react-native';
+import React, { useEffect } from 'react';
+import { View, Text, TouchableOpacity, Image, BackHandler } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 import { LinearGradient } from 'expo-linear-gradient';
+import { useNavigation } from '@react-navigation/native'; // Import useNavigation hook
+import auth from '@react-native-firebase/auth';
+
+
+import { useSelector } from 'react-redux';
 
 const MyAccountScreen = () => {
+
+  const navigation = useNavigation(); // Get the navigation object
+
+
+  const user = useSelector(state => state.user);
+  const { uid, userData } = user;
+
+  console.log(userData)
+
   // Placeholder data
   const deliveryBoy = {
-    name: 'Savindar Yadav',
-    image: require('../assets/dboy.jpg'),
-    contact: '+91 9353762773',
+    name: userData.name || 'test user',
+    image: userData.delaerSelfiImage ? { uri: userData.delaerSelfiImage } : require('../assets/dboy.jpg'),
+    contact: userData.mobileNumber || '+91 9353762773',
   };
 
   const admin = {
@@ -15,12 +31,33 @@ const MyAccountScreen = () => {
     contact: '+91 9065455407',
   };
 
+  useEffect(() => {
+    const backHandler = BackHandler.addEventListener('hardwareBackPress', () => {
+      // Navigate to the main page instead of going back
+      navigation.navigate('Main');
+      return true; // Returning true prevents default back behavior
+    });
+
+    return () => backHandler.remove(); // Remove the event listener on component unmount
+  }, [navigation]);
+
+
   const handleBack = () => {
-    // Implement navigation logic to go back
+    // Navigate to the main page instead of going back
+    navigation.navigate('Main');
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     // Implement logout logic
+    try {
+      // await auth().signOut();
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('userID');
+
+      navigation.navigate('LoginScreen');
+    } catch (error) {
+      console.error('Error occurred during logout:', error);
+    }
   };
 
   return (

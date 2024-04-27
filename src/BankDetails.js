@@ -4,6 +4,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { useNavigation } from '@react-navigation/native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Picker } from '@react-native-picker/picker'; 
+import firestore from "@react-native-firebase/firestore";
+import storage from '@react-native-firebase/storage';
+import { useDispatch, useSelector } from 'react-redux';
+
 
 const BankDetails = () => {
   const navigation = useNavigation();
@@ -13,9 +17,58 @@ const BankDetails = () => {
   const [passbookImage, setPassbookImage] = useState(null);
   const [selectedBank, setSelectedBank] = useState('');
 
-  const handleSave = () => {
+  const user = useSelector(state => state.user);
+
+
+  const uploadImage = async (filename,fileUri ) => {
+
+    try {
+      const response = await fetch(fileUri);
+      const blob = await response.blob();
+      const url = await uploadImg(filename ,blob);
+      return url;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    }
+  }
+
+
+async function uploadImg(filename , file) {
+  const path = `users/${filename}`;
+
+  try {
+    const reference = storage().ref(path);
+        await reference.put(file);
+
+        const url = await reference.getDownloadURL().catch((error) => { throw error; });
+        return url;
+  }
+  catch (error) {
+    throw error;
+  }
+}
+
+
+
+  const handleSave = async () => {
     if (accountNumber && reEnteredAccountNumber && selectedBank && ifscCode) {
       if (accountNumber === reEnteredAccountNumber) {
+        const passBookImage = await uploadImage(`passbook`, passbookImage);
+
+
+        const bankDetails = {
+          accountNumber,
+          bankName : selectedBank ,
+          ifscCode ,
+          PassBookImage:  passBookImage 
+        }
+
+        await firestore().collection('users').doc(user.uid).update({
+          bankDetails 
+      }); 
+
+  
+
         console.log('Bank details saved successfully');
         navigation.navigate('TakeSelfie');
       } else {
@@ -26,6 +79,7 @@ const BankDetails = () => {
     }
   };
 
+
   const handlePassbookUpload = async () => {
     let result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
@@ -34,11 +88,14 @@ const BankDetails = () => {
       quality: 1,
     });
 
-    if (!result.cancelled) {
-      setPassbookImage(result.uri);
+    if (!result.cancell) {
+      const uri = result.assets[0].uri;
+      setPassbookImage(uri);
     }
   };
 
+
+  
   return (
     <LinearGradient
       colors={['white', 'white']}

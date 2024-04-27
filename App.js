@@ -14,12 +14,18 @@ import SplashScreen from './src/SplashScreen';
 import BottomTabNavigator from './src/BottomTabNavigator';
 import Main from './src/Main';
 
+
+import { Provider } from 'react-redux';
+import store from './src/Store/store'; 
+
+
 const Stack = createStackNavigator();
 
 
 
 const AppNavigator = () => {
     return (
+      <Provider store={store}>
         <NavigationContainer>
             <Stack.Navigator>
                 <Stack.Screen name='SplashScreen' component={SplashScreen} options={{headerShown:false}} />
@@ -107,6 +113,7 @@ const AppNavigator = () => {
                   
             </Stack.Navigator>
         </NavigationContainer>
+        </Provider>
     );
 };
 

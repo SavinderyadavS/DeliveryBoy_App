@@ -1,11 +1,23 @@
 import React from 'react';
 import { StyleSheet, View, TouchableOpacity, Text, ImageBackground, Image } from 'react-native';
 
-const CreateProfile = ({ navigation }) => {
-  const handleStartNow = () => {
+
+
+
+const CreateProfile = ({ navigation ,route }) => {
+
+
+
+
+  const { formattedPhoneNumber} = route.params;
+
+  const handleStartNow = async () => {
+
     // Navigate to the basic detail page
-    navigation.navigate('BasicDetailsPage');
+    navigation.navigate('BasicDetailsPage',{ formattedPhoneNumber});
   };
+
+
 
   // List of steps
   const steps = [

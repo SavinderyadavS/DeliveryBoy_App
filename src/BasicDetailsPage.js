@@ -1,12 +1,27 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import firestore from '@react-native-firebase/firestore';
 
-const BasicDetailsPage = ({ navigation }) => {
+import { useDispatch, useSelector } from 'react-redux';
+import { setUserID, setUserData } from './Store/Slice/userSlice';
+
+
+const BasicDetailsPage = ({ navigation,route }) => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [gender, setGender] = useState('');
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
+
+
+    const { formattedPhoneNumber} = route.params; 
+
+
+  const dispatch = useDispatch();
+  const user = useSelector(state => state.user);
+
+  const {uid} = user;
+
 
   useEffect(() => {
     // Enable or disable button based on field values
@@ -17,11 +32,28 @@ const BasicDetailsPage = ({ navigation }) => {
     }
   }, [firstName, lastName, gender]);
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     // Check if all fields are filled
     if (firstName && lastName && gender) {
       // Navigate to the next screen
-      navigation.navigate('UploadDocuments');
+console.log("creating")
+      try {
+        await firestore().collection('users').doc(uid).set({
+          firstName,
+          lastName,
+          gender,
+          mobileNumber:formattedPhoneNumber,
+          type : "dealer",
+          verified:true // this should be done by  manual for verification 
+        });
+
+        navigation.navigate('UploadDocuments');
+        // navigation.navigate('Main'); // Move to main screen
+    } catch (error) {
+        console.log("Failed to save:", error);
+    }
+
+      
     } else {
       // Display an alert if any field is empty
       alert('Please fill in all fields.');

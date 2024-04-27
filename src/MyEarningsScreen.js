@@ -1,41 +1,25 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, Image, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, Image, TouchableOpacity, ScrollView ,StyleSheet} from 'react-native';
+import firestore from "@react-native-firebase/firestore";
+import { useDispatch, useSelector } from 'react-redux';
 
-// Define the fetchWeekDataFromAPI function to fetch week data from your backend API
-const fetchWeekDataFromAPI = async () => {
-  try {
-    // Make an API call to fetch week data
-    const response = await fetch('your_api_endpoint');
-    // Assuming the response is in JSON format, parse it
-    const data = await response.json();
-    return data; // Return the fetched data
-  } catch (error) {
-    console.error('Error fetching week data:', error);
-    return []; // Return an empty array in case of error
-  }
-};
+
+
 
 const MyEarningsScreen = () => {
-  const [numberOfOrdersDelivered, setNumberOfOrdersDelivered] = useState(0);
-  const [weekData, setWeekData] = useState([]);
+  
+  // const dispatch = useDispatch();
+  const user = useSelector(state => state.user);
+  // const [weekData, setWeekData] = useState(user.order);
+  // const sixDaysAgo = new Date();
+  // sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
 
-  // Function to fetch and update week data from API
-  const fetchWeekData = async () => {
-    try {
-      // Fetch week data from API
-      const data = await fetchWeekDataFromAPI();
-      // Update state with fetched week data
-      setWeekData(data);
-    } catch (error) {
-      console.error('Error fetching week data:', error);
-    }
-  };
 
-  useEffect(() => {
-    // Fetch week data when component mounts
-    fetchWeekData();
-  }, []);
+  const weekData = user?.order?.filter(order => order.status === "Delivered");
+  const numberOfOrdersDelivered = weekData.length;
 
+
+console.log("irsersr",weekData)
   return (
     <View style={{ flex: 1,marginTop:20 }}>
       {/* Background image */}
@@ -68,20 +52,50 @@ const MyEarningsScreen = () => {
           // Handle onPress event
         }}
       >
-        <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'black' }}>No of orders delivered</Text>
+        <Text style={{ fontSize: 16, fontWeight: 'bold', color: 'black' }}>No of orders delivered : {numberOfOrdersDelivered}</Text>
         <Text style={{ fontSize: 14, color: 'black' }}>in this week</Text>
       </TouchableOpacity>
 
       {/* Scrollable box to show delivered order data */}
       <ScrollView style={{ marginTop: 10, paddingHorizontal: 20 }}>
-        {weekData.map((order, index) => (
+        {/* {weekData.map((order, index) => (
           <View key={index} style={{ borderWidth: 1, borderColor: 'white', padding: 10, marginBottom: 10 }}>
-            <Text style={{ color: 'white' }}>{order.orderDetails}</Text>
+            <Text style={{ color: 'red' }}>{index}</Text>
+            <Text style={{ color: 'red' }}>{order.id}</Text>
           </View>
-        ))}
+        ))} */}
+        {weekData.map((order, index) => (
+  <View key={index} style={styles.orderItem}>
+    <Text style={styles.orderIndex}>{index + 1}</Text>
+    <Text style={styles.orderId}>{order.id}</Text>
+  </View>
+))}
       </ScrollView>
     </View>
   );
 };
 
 export default MyEarningsScreen;
+const styles = StyleSheet.create({
+  orderItem: {
+    borderWidth: 1,
+    borderColor: 'white',
+    padding: 10,
+    marginBottom: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  orderIndex: {
+    color: 'green',
+    marginRight: 10,
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  orderId: {
+    color: 'green',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+});

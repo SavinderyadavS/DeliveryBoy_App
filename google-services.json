@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "161907088331",
+    "project_id": "waterbox-b6e39",
+    "storage_bucket": "waterbox-b6e39.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:161907088331:android:f84b4193d65c02cbe9b44e",
+        "android_client_info": {
+          "package_name": "com.savinder_paaniwala.snack77ad43db899c4b27b63d78552b007b15"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClkfZMaF6DgusvvOnHwDgc5NX-bcIqnSU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:161907088331:android:bc87711096063e17e9b44e",
+        "android_client_info": {
+          "package_name": "com.savinder_paaniwala.snackdca18de42ea14eaa85b2c60b0fee8df0"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyClkfZMaF6DgusvvOnHwDgc5NX-bcIqnSU"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

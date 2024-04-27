@@ -1,75 +1,55 @@
-import React, { useState } from 'react';
+
+
+
+import React, { useState, useEffect } from 'react';
 import { View, Text, TouchableOpacity, FlatList, StyleSheet, Linking, Alert } from 'react-native';
+import firestore from "@react-native-firebase/firestore";
+import { useDispatch, useSelector } from 'react-redux';
+import { setUserID, setUserData, setOrder } from './Store/Slice/userSlice';
 
 const MyOrdersScreen = ({ navigation }) => {
-  const [orders, setOrders] = useState([
-    {
-      id: '1',
-      orderId: 'ORD001',
-      status: 'Pending',
-      itemDetails: '2 * 20 Liter Water  2 Dispenser',
-      dateTime: '2024-04-07 10:30',
-      customerName: 'Rajesh',
-      customerMobile: '1234567890',
-      customerAddress: 'No 23, Floor 3, MT Street, RT Nagar, Blr-560032',
-      amountToCollect: '₹27.00',
-      cashReceived: false,
-      expanded: false,
-    },
-    {
-      id: '2',
-      orderId: 'ORD002',
-      status: 'Delivered',
-      itemDetails: '1 * 20 Liter Water',
-      dateTime: '2024-04-06 15:45',
-      customerName: 'Sheela ',
-      customerMobile: '9876543210',
-      customerAddress: 'No 12, Floor 0, MT Street, RT Nagar, Blr-560032',
-      amountToCollect: '₹64.00',
-      cashReceived: true,
-      expanded: false,
-    },
-    {
-      id: '3',
-      orderId: 'ORD003',
-      status: 'Cancelled',
-      itemDetails: '3 * 10 Liter Water',
-      dateTime: '2024-04-05 14:00',
-      customerName: 'John Doe',
-      customerMobile: '7890123456',
-      customerAddress: 'No 45, Floor 2, ML Street, BTM Layout, Blr-560076',
-      amountToCollect: '₹35.00',
-      cashReceived: false,
-      expanded: false,
-    },
-    {
-      id: '4',
-      orderId: 'ORD004',
-      status: 'Pending',
-      itemDetails: '5 * 20 Liter Water',
-      dateTime: '2024-04-08 09:15',
-      customerName: 'Amit Kumar',
-      customerMobile: '9988776655',
-      customerAddress: 'Flat 101, Sai Apartments, Kormangala, Blr-560034',
-      amountToCollect: '₹80.00',
-      cashReceived: false,
-      expanded: false,
-    },
-    {
-      id: '5',
-      orderId: 'ORD005',
-      status: 'Pending',
-      itemDetails: '1 * 10 Liter Water',
-      dateTime: '2024-04-09 11:30',
-      customerName: 'Priya Sharma',
-      customerMobile: '7788990011',
-      customerAddress: 'No 7, Lakeview Street, HSR Layout, Blr-560102',
-      amountToCollect: '₹20.00',
-      cashReceived: false,
-      expanded: false,
-    },
-    // Add more sample orders here
-  ]);
+
+  const dispatch = useDispatch();
+  const user = useSelector(state => state.user);
+
+
+
+  const [orders, setOrders] = useState([]);
+
+
+  useEffect(() => {
+    const unsubscribe = firestore().collection('orders').onSnapshot(snapshot => {
+      const updatedOrders = snapshot.docs.map(order => {
+        const orderData = order.data(); // Access data property of each order
+        let orderId = `ORD${order.id.padStart(3, '0')}`;
+        if (orderId.length > 6) {
+          orderId = orderId.slice(0, 6); // Trim to maximum length of 6 characters
+        }
+        return {
+          id: order.id,
+          orderId,
+          status: orderData.status,
+          itemDetails: orderData.product.length > 0 ? `${orderData.product[0].quantity} * ${orderData.product[0].name}` : 'No items',
+          dateTime: orderData.orderDate.toDate().toLocaleString(),
+          customerName: orderData.CustomerName,
+          customerMobile: orderData.customerMobile,
+          // customerAddress: 'No 7, Lakeview Street, HSR Layout, Blr-560102',
+          customerAddress: `${orderData.customerAddress.houseFlatNo}, ${orderData.customerAddress.floor}, ${orderData.customerAddress.street}, ${orderData.customerAddress.landmark}, ${orderData.customerAddress.Area}, ${orderData.customerAddress.PinCode}`,
+          amountToCollect: orderData.totalPrice.toFixed(2),
+          expanded: false,
+        };
+      });
+      setOrders(updatedOrders);
+      dispatch(setOrder(updatedOrders));
+      console.log('Retrieved and formatted orders: ', updatedOrders);
+    });
+
+    return () => {
+      unsubscribe(); // Cleanup function to unsubscribe when component unmounts
+    };
+  }, []);
+
+
 
   const toggleOrderExpansion = id => {
     setOrders(prevOrders =>
@@ -83,28 +63,98 @@ const MyOrdersScreen = ({ navigation }) => {
     Linking.openURL(`tel:${phoneNumber}`);
   };
 
-  const handleCashReceived = (order) => {
-    if (order.status === 'Cancelled') {
-      Alert.alert('Order Cancelled');
-      return;
+
+  const handleStatusChange = async (order, newStatus) => {
+    try {
+      if (newStatus === 'Cancelled') {
+        console.log('Cancelling order...');
+        Alert.alert('Confirm Order Cancellation', 'Are you sure you want to cancel this order?', [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'OK', onPress: async () => {
+              try {
+                await firestore().collection('orders').doc(order.id).update({ status: 'Cancelled' });
+                confirmStatusChange(order, 'Cancelled');
+                console.log('Order cancelled successfully in Firebase.');
+              } catch (error) {
+                console.error('Error cancelling order: ', error);
+                Alert.alert('Error', 'Failed to cancel order. Please try again later.');
+              }
+            }
+          },
+        ]);
+      } else {
+        await firestore().collection('orders').doc(order.id).update({ status: newStatus });
+        confirmStatusChange(order, newStatus);
+      }
+    } catch (error) {
+      console.error('Error updating order status: ', error);
+      Alert.alert('Error', 'Failed to update order status. Please try again later.');
     }
-    Alert.alert(
-      'Confirm Cash Received',
-      'Please confirm that cash received',
-      [
-        { text: 'Cancel', onPress: () => console.log('Cancel Pressed'), style: 'cancel' },
-        { text: 'OK', onPress: () => confirmCashReceived(order) },
-      ],
-      { cancelable: false }
+  };
+
+
+  const handleOpenMap = () => {
+    // Replace coordinates with your desired location
+    const latitude = 13.029799;
+    const longitude = 77.604704;
+    const url = `http://maps.apple.com/maps?daddr=${latitude},${longitude}`;
+    Linking.openURL(url);
+  };
+
+
+  const confirmOrderCancellation = (order) => {
+    setOrders(prevOrders =>
+      prevOrders.map(o =>
+        o.id === order.id ? { ...o, status: 'Cancelled' } : o
+      )
     );
   };
 
-  const confirmCashReceived = (order) => {
+  const confirmStatusChange = (order, newStatus) => {
     setOrders(prevOrders =>
       prevOrders.map(o =>
-        o.id === order.id ? { ...o, cashReceived: true, status: 'Delivered' } : o
+        o.id === order.id ? { ...o, status: newStatus } : o
       )
     );
+  };
+
+  const renderButtons = (order) => {
+    if (order.status === 'Pending') {
+      return (
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity
+            style={[styles.statusButton, { backgroundColor: 'green' }]}
+            onPress={() => handleStatusChange(order, 'Accepted')}
+          >
+            <Text style={styles.buttonText}>Accept</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.statusButton, { backgroundColor: 'red' }]}
+            onPress={() => handleStatusChange(order, 'Cancelled')}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    } else if (order.status === 'Accepted') {
+      return (
+        <View style={styles.buttonsContainer}>
+          <TouchableOpacity
+            style={[styles.statusButton, { backgroundColor: 'green' }]}
+            onPress={() => handleStatusChange(order, 'Delivered')}
+          >
+            <Text style={styles.buttonText}>confirm Delivery</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.statusButton, { backgroundColor: 'red' }]}
+            onPress={() => handleStatusChange(order, 'Cancelled')}
+          >
+            <Text style={styles.buttonText}>Cancel</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
   };
 
   const renderOrderDetails = order => {
@@ -119,16 +169,11 @@ const MyOrdersScreen = ({ navigation }) => {
           </TouchableOpacity>
           <Text style={styles.customerAddress}>Address: {order.customerAddress}</Text>
           <Text style={styles.amountToCollect}>Amount to Collect: {order.amountToCollect}</Text>
-          <TouchableOpacity
-            style={[styles.cashReceivedButton, { backgroundColor: order.cashReceived || order.status === 'Cancelled' ? '#ccc' : 'red' }]}
-            onPress={() => handleCashReceived(order)}
-            disabled={order.cashReceived || order.status === 'Cancelled'}
-          >
-            <Text style={styles.cashReceivedButtonText}>{order.cashReceived ? 'Cash Received' : 'Pending'}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.openMapButton}>
+          {renderButtons(order)}
+          <TouchableOpacity style={styles.openMapButton} onPress={handleOpenMap}>
             <Text style={styles.openMapButtonText}>Open Map</Text>
           </TouchableOpacity>
+
         </View>
       );
     }
@@ -150,6 +195,7 @@ const MyOrdersScreen = ({ navigation }) => {
       </TouchableOpacity>
     );
   };
+
 
   const getStatusColor = status => {
     switch (status) {
@@ -185,7 +231,7 @@ const styles = StyleSheet.create({
   },
   orderList: {
     paddingBottom: 20,
-    marginTop:25,
+    marginTop: 25,
   },
   orderItem: {
     backgroundColor: '#f0f0f0',
@@ -229,13 +275,17 @@ const styles = StyleSheet.create({
   amountToCollect: {
     marginTop: 5,
   },
-  cashReceivedButton: {
+  buttonsContainer: {
+    flexDirection: 'row',
     marginTop: 10,
+    justifyContent: 'space-between',
+  },
+  statusButton: {
     padding: 10,
     borderRadius: 5,
     alignItems: 'center',
   },
-  cashReceivedButtonText: {
+  buttonText: {
     color: '#fff',
   },
   openMapButton: {
@@ -251,3 +301,4 @@ const styles = StyleSheet.create({
 });
 
 export default MyOrdersScreen;
+

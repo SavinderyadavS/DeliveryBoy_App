@@ -3,6 +3,10 @@ import { View, Text, TouchableOpacity, Image } from 'react-native';
 import { Camera } from 'expo-camera';
 import { AntDesign } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
+import firestore from "@react-native-firebase/firestore";
+import storage from '@react-native-firebase/storage';
+import { useDispatch, useSelector } from 'react-redux';
+
 
 const TakeSelfie = () => {
   const navigation = useNavigation();
@@ -12,6 +16,10 @@ const TakeSelfie = () => {
   const [error, setError] = useState(null);
   const [showCamera, setShowCamera] = useState(false); // New state variable
   const [isContinueDisabled, setIsContinueDisabled] = useState(true); // New state variable
+
+  
+  const user = useSelector(state => state.user);
+
 
   // Request permission to use the camera
   useEffect(() => {
@@ -42,7 +50,45 @@ const TakeSelfie = () => {
     }
   };
 
-  const handleContinue = () => {
+
+  const uploadImage = async (filename,fileUri ) => {
+
+    try {
+      const response = await fetch(fileUri);
+      const blob = await response.blob();
+      const url = await uploadImg(filename ,blob);
+      return url;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    }
+  }
+
+
+async function uploadImg(filename , file) {
+  const path = `users/${filename}`;
+
+  try {
+    const reference = storage().ref(path);
+        await reference.put(file);
+
+        const url = await reference.getDownloadURL().catch((error) => { throw error; });
+        return url;
+  }
+  catch (error) {
+    throw error;
+  }
+}
+
+
+
+  const handleContinue = async () => {
+
+    const delaerSelfiImage = await uploadImage(`delaerSelfi`, capturedImage); 
+
+await firestore().collection('users').doc(user.uid).update({
+  delaerSelfiImage 
+      }); 
+
     if (!isContinueDisabled) {
       // Navigate to next page only if an image has been captured
       navigation.navigate('Hurray'); // Replace 'NextPage' with your actual screen name
